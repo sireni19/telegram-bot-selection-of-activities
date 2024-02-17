@@ -1,6 +1,7 @@
 package com.botproject.boring.service;
 
 import com.botproject.boring.config.BotConfig;
+import com.botproject.boring.model.User;
 import com.botproject.boring.model.UserService;
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
@@ -61,24 +62,35 @@ public class TelegramBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
 
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String messageTest = update.getMessage().getText();
+            String messageText = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
-            switch (messageTest) {
-                case "/start":
-                    log.info("Method start");
-                    userService.registerUser(update.getMessage());
-                    startCommandReceived(chatId, update.getMessage().getChat().getUserName());
-                    break;
-                case "/show":
-                    show(update.getMessage().getChatId());
-                    break;
-                default:
-                    sendMessage(chatId, "Incorrect command");
+
+            if (messageText.contains("/send") && chatId==(config.getHostId())) {
+                var textToSend = EmojiParser.parseToUnicode(messageText.substring((messageText.indexOf(" "))));
+                var users = userService.findAllUsers();
+                for (User user : users) {
+                    sendMessage(user.getChatId(), textToSend);
+                }
+            } else {
+                switch (messageText) {
+                    case "/start":
+                        log.info("Method start");
+                        userService.registerUser(update.getMessage());
+                        startCommandReceived(chatId, update.getMessage().getChat().getUserName());
+                        break;
+                    case "/show":
+                        show(update.getMessage().getChatId());
+                        break;
+                    case "/send":
+                        break;
+                    default:
+                        sendMessage(chatId, "Incorrect command");
+                }
             }
-        }else if(update.hasCallbackQuery()){
+        } else if (update.hasCallbackQuery()) {
             String callBackData = update.getCallbackQuery().getData();
             long chatId = update.getCallbackQuery().getMessage().getChatId();
-            if(callBackData.equals(EVENT)){
+            if (callBackData.equals(EVENT)) {
                 show(chatId);
             }
         }
@@ -121,13 +133,13 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     /**
-     * Метод, которым бот отправляет пользователю сообщение о приветствии
+     * Метод, которым бот отправляет пользователю сообщение о приветствии, рассылки или сообщение
+     * об ошибке команды пользователя
      *
      * @param chatId идентификатор, по которому бот определяет какой перед ним пользователь
      * @param text   содержимое ответа, который дает бот пользователю в ответ на его запрос
      */
     private void sendMessage(long chatId, String text) {
-        log.info("What is it?");
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText(text);
