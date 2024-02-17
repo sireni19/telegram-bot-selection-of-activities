@@ -3,6 +3,7 @@ package com.botproject.boring.service;
 import com.botproject.boring.config.BotConfig;
 import com.botproject.boring.model.User;
 import com.botproject.boring.model.UserService;
+import com.botproject.boring.tasks.ApiCustomer;
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,9 +28,11 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final BotConfig config;
     @Autowired
     private UserService userService;
+    private ApiCustomer customer;
 
-    public TelegramBot(BotConfig config) {
+    public TelegramBot(BotConfig config,ApiCustomer customer) {
         this.config = config;
+        this.customer=customer;
         List<BotCommand> menu = new ArrayList<>();
         menu.add(new BotCommand("/start", "Bot starts working and get welcome message"));
         menu.add(new BotCommand("/show", "Show a random event"));
@@ -48,6 +51,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     @Override
+    @Deprecated
     public String getBotToken() {
         return config.getToken();
     }
@@ -55,7 +59,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     /**
      * Представляет собой обновление чата, содержит набор функций, которые бот может
      * предоставить пользователю
-     *
      * @param update Update received - входящее обновление
      */
     @Override
@@ -103,7 +106,8 @@ public class TelegramBot extends TelegramLongPollingBot {
      * @param name   имя пользователя по его аккаунту
      */
     private void startCommandReceived(long chatId, String name) {
-        String answer = EmojiParser.parseToUnicode("Hi, " + name + ", nice to meet you!" + " :blush:");
+        String answer = EmojiParser.parseToUnicode("Hi, " + name + ", nice to meet you!" + " :blush:"+"\n" +
+                "I will suggest an activity for you");
         sendMessage(chatId, answer);
         log.info("Replied to user, method startCommandReceived() from TelegramBot");
     }
@@ -115,15 +119,14 @@ public class TelegramBot extends TelegramLongPollingBot {
      * @param chatId идентификатор, по которому бот определяет какой перед ним пользователь
      */
     private void show(long chatId) {
-        //TODO сюда внести будущий метод, который будет работать со сторонним API
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
-        message.setText("Here will be information about new random event");
+        message.setText(customer.getRandomActivity());
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();//виртуальная клавиатура
         List<List<InlineKeyboardButton>> rows = new ArrayList<>();//ряды кнопок
         List<InlineKeyboardButton> buttonsInRow = new ArrayList<>();//кнопки в ряду
         InlineKeyboardButton showButton = new InlineKeyboardButton();
-        showButton.setText("Pick a new event ");
+        showButton.setText("Pick a new activity ");
         showButton.setCallbackData(EVENT);//идентификатор кнопки, то есть то, как отличать кнопки друг от друга
         buttonsInRow.add(showButton);
         rows.add(buttonsInRow);
